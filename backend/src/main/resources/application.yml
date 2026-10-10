@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: reservation
+  # Valeurs par défaut pour le développement local (base lancée par `docker compose up -d db`).
+  # En conteneur, elles sont surchargées par les variables d'environnement de docker-compose.yml.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reservation}
+    username: ${DB_USER:reservation}
+    password: ${DB_PASSWORD:reservation}
+  jpa:
+    # Le schéma vient uniquement des migrations Flyway : Hibernate vérifie
+    # au démarrage que les entités correspondent aux tables, sans rien modifier.
+    hibernate:
+      ddl-auto: validate
+    # Pas de session Hibernate ouverte pendant le rendu HTTP : évite les requêtes
+    # SQL cachées (lazy loading) depuis les contrôleurs.
+    open-in-view: false
+  flyway:
+    locations: classpath:db/migration
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

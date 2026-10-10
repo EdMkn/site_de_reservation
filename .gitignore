@@ -1,0 +1,16 @@
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Angular
+node_modules/
+dist/
+.angular/
+
+# Environnement local
+.env
