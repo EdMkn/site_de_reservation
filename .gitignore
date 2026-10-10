@@ -14,3 +14,7 @@ dist/
 
 # Environnement local
 .env
+
+~lock.* 
+# Fichiers verrou LibreOffice
+.~lock.*
