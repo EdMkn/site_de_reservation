@@ -1,0 +1,5 @@
+# Profil "demo" : ajoute les données de démonstration (db/seed/R__seed.sql).
+# Activé par docker-compose (SPRING_PROFILES_ACTIVE=demo), jamais par les tests.
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed

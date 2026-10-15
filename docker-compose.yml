@@ -22,6 +22,8 @@ services:
       DB_URL: jdbc:postgresql://db:5432/reservation
       DB_USER: reservation
       DB_PASSWORD: ${DB_PASSWORD:-reservation}
+      # Charge les données de démonstration (db/seed/R__seed.sql)
+      SPRING_PROFILES_ACTIVE: demo
     ports:
       - "8080:8080"
     depends_on:
