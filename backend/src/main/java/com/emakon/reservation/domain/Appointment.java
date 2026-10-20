@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.Instant;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -26,6 +27,9 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "rendez_vous")
 public class Appointment {
+
+    /** Délai minimal entre l'annulation par le patient et le début du rendez-vous. */
+    public static final Duration PATIENT_CANCELLATION_NOTICE = Duration.ofHours(24);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -98,6 +102,35 @@ public class Appointment {
         this.end = start.plus(consultationType.getDuration());
         this.status = AppointmentStatus.CONFIRME;
         this.patientNote = patientNote;
+    }
+
+    /**
+     * Annulation : changement de statut, jamais de suppression. La ligne quitte la
+     * contrainte d'exclusion (WHERE statut = 'CONFIRME'), le créneau redevient libre.
+     *
+     * Le patient doit prévenir au moins 24 h à l'avance ; le praticien peut annuler
+     * jusqu'au début (maladie, urgence). Dans les deux cas, seul un rendez-vous confirmé
+     * et pas encore commencé est annulable.
+     *
+     * La vérification "est-ce bien SON rendez-vous" n'est pas ici : elle relève du service,
+     * qui connaît l'utilisateur connecté.
+     *
+     * @throws CancellationNotAllowedException si l'annulation n'est pas permise (traduite en 409)
+     */
+    public void cancel(Role by, Instant now) {
+        if (status != AppointmentStatus.CONFIRME) {
+            throw new CancellationNotAllowedException("Seul un rendez-vous confirmé peut être annulé");
+        }
+        if (!now.isBefore(start)) {
+            throw new CancellationNotAllowedException("Un rendez-vous commencé ou passé ne peut plus être annulé");
+        }
+        if (by == Role.PATIENT && now.isAfter(start.minus(PATIENT_CANCELLATION_NOTICE))) {
+            throw new CancellationNotAllowedException("Annulation impossible à moins de 24 h du rendez-vous");
+        }
+        // Les deux champs changent ensemble : la contrainte chk_rendez_vous_annulation
+        // (statut annulé <=> annule_le renseigné) le vérifie aussi côté base.
+        this.status = by == Role.PATIENT ? AppointmentStatus.ANNULE_PATIENT : AppointmentStatus.ANNULE_PRATICIEN;
+        this.cancelledAt = now;
     }
 
     public Long getId() {

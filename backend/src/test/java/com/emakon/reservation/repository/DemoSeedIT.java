@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -32,6 +33,7 @@ class DemoSeedIT {
     @Autowired PractitionerRepository practitioners;
     @Autowired PatientRepository patients;
     @Autowired AppointmentRepository appointments;
+    @Autowired UserAccountRepository users;
 
     @Test
     void seedIsLoaded() {
@@ -51,5 +53,14 @@ class DemoSeedIT {
         var blocking = appointments.findConfirmedOverlapping(martin.getId(), now, now.plus(15, ChronoUnit.DAYS));
 
         assertThat(blocking).hasSize(2);
+    }
+
+    @Test
+    void demoAccountsAcceptTheDocumentedPassword() {
+        var encoder = new BCryptPasswordEncoder();
+        for (String email : new String[] {"claire.martin@example.com", "jean.dupont@example.com"}) {
+            var account = users.findByEmailIgnoreCase(email).orElseThrow();
+            assertThat(encoder.matches("demo1234", account.getPasswordHash())).as(email).isTrue();
+        }
     }
 }

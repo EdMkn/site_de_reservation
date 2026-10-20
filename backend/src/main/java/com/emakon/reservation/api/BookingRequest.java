@@ -7,7 +7,8 @@ import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 
 /**
- * Corps de POST /api/appointments.
+ * Corps de POST /api/appointments. Pas de patientId : le patient est l'utilisateur
+ * connecté, déduit du jeton. Le client ne peut donc pas réserver au nom d'un autre.
  *
  * Bean Validation ne vérifie que la forme (champs présents, longueur) : 400 si elle est
  * invalide. Le fond (créneau réservable, motif du praticien...) relève du service.
@@ -15,8 +16,6 @@ import java.time.OffsetDateTime;
  * @param locationId null en distanciel
  */
 public record BookingRequest(
-        @Schema(description = "PROVISOIRE : sera remplacé par l'utilisateur authentifié (étape 6)")
-        @NotNull Long patientId,
         @NotNull Long practitionerId,
         @NotNull Long consultationTypeId,
         @NotNull Modality modality,

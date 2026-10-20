@@ -35,3 +35,8 @@ management:
 # Fuseau des cabinets : les plages horaires (heure locale) sont interprétées dans ce fuseau.
 reservation:
   timezone: Europe/Paris
+  # Sessions : expiration glissante après 7 jours sans requête, absolue 30 jours après
+  # la connexion. Format Spring des durées : 30m, 12h, 7d...
+  session:
+    idle-timeout: 7d
+    max-lifetime: 30d

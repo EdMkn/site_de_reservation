@@ -10,6 +10,7 @@ import com.emakon.reservation.repository.AppointmentRepository;
 import com.emakon.reservation.repository.ConsultationTypeRepository;
 import com.emakon.reservation.repository.LocationRepository;
 import com.emakon.reservation.repository.PatientRepository;
+import com.emakon.reservation.repository.PractitionerRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -21,10 +22,14 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Cas d'usage "réserver un créneau".
  *
- * Deux niveaux de protection contre la double réservation : la vérification applicative
- * (le créneau figure dans les disponibilités calculées) donne un message clair dans le cas
- * courant ; les contraintes d'exclusion PostgreSQL garantissent la correction quand deux
- * réservations concurrentes passent toutes deux la vérification.
+ * Protection contre la double réservation, en trois couches :
+ * 1. verrous sur les lignes du praticien et du patient : les réservations concurrentes
+ *    sur un même agenda passent l'une après l'autre ;
+ * 2. vérification applicative (le créneau figure dans les disponibilités calculées) :
+ *    donne un message clair ;
+ * 3. contraintes d'exclusion PostgreSQL : la garantie finale, même si un code futur
+ *    oublie les deux premières (et seule à voir les rendez-vous du patient chez un
+ *    autre praticien).
  */
 @Service
 public class BookingService {
@@ -33,6 +38,7 @@ public class BookingService {
     static final String PRACTITIONER_OVERLAP = "excl_rendez_vous_praticien_chevauchement";
     static final String PATIENT_OVERLAP = "excl_rendez_vous_patient_chevauchement";
 
+    private final PractitionerRepository practitioners;
     private final PatientRepository patients;
     private final ConsultationTypeRepository consultationTypes;
     private final LocationRepository locations;
@@ -40,12 +46,14 @@ public class BookingService {
     private final AvailabilityService availability;
     private final ZoneId zone;
 
-    public BookingService(PatientRepository patients,
+    public BookingService(PractitionerRepository practitioners,
+                          PatientRepository patients,
                           ConsultationTypeRepository consultationTypes,
                           LocationRepository locations,
                           AppointmentRepository appointments,
                           AvailabilityService availability,
                           ZoneId practiceZone) {
+        this.practitioners = practitioners;
         this.patients = patients;
         this.consultationTypes = consultationTypes;
         this.locations = locations;
@@ -65,8 +73,25 @@ public class BookingService {
     @Transactional
     public Long book(Long patientId, Long practitionerId, Long consultationTypeId,
                      Modality modality, Long locationId, Instant start, String patientNote) {
-        // 1. Patient. Provisoire : l'identifiant vient du corps de la requête ; à l'étape 6,
-        //    il viendra de l'utilisateur authentifié.
+        // 0. Verrous, AVANT la vérification du point 3.
+        //
+        //    Sans eux, deux réservations simultanées du même créneau passent toutes deux le
+        //    point 3, puis s'interbloquent à l'INSERT : chacune voit dans l'index de la
+        //    contrainte d'exclusion la ligne non commitée de l'autre, et attend sa fin.
+        //    PostgreSQL annule alors l'une des deux (deadlock, SQLSTATE 40P01) : pas de
+        //    double réservation, mais une erreur 500 au lieu d'un 409.
+        //
+        //    Avec eux, la seconde attend ici que la première se termine. En READ COMMITTED
+        //    (niveau par défaut de PostgreSQL), chaque requête voit les données commitées à
+        //    son début : le point 3 de la seconde voit donc le rendez-vous de la première,
+        //    et répond proprement "créneau indisponible".
+        //
+        //    Toujours dans le même ordre, praticien puis patient : deux transactions qui
+        //    verrouillent dans le même ordre ne peuvent pas s'attendre mutuellement.
+        practitioners.lockForBooking(practitionerId);
+        patients.lockForBooking(patientId);
+
+        // 1. Patient : l'identifiant vient du jeton (utilisateur connecté), pas du client.
         Patient patient = patients.findById(patientId)
                 .orElseThrow(() -> new NotFoundException("Patient introuvable : " + patientId));
 

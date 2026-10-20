@@ -4,6 +4,7 @@ import com.emakon.reservation.availability.AvailabilityCalculator;
 import java.time.Clock;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * Java pur) : c'est ici qu'on le déclare comme bean, avec l'horloge et le fuseau.
  */
 @Configuration
+@EnableConfigurationProperties(SessionProperties.class)
 public class ServiceConfig {
 
     /** Horloge système. Les tests la remplacent par une horloge figée. */

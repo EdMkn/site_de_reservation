@@ -4,6 +4,8 @@ import com.emakon.reservation.domain.Appointment;
 import com.emakon.reservation.domain.AppointmentStatus;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -31,4 +33,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
               and a.end > :from
             """)
     List<Appointment> findOverlappingWithStatus(Long practitionerId, AppointmentStatus status, Instant from, Instant to);
+
+    // @EntityGraph : patient, praticien, motif et lieu chargés dans la même requête
+    // (jointures). Sans lui, afficher une liste de N rendez-vous déclencherait jusqu'à
+    // 4 requêtes de plus par ligne pour initialiser les relations LAZY (problème N+1).
+
+    @EntityGraph(attributePaths = {"patient", "practitioner", "consultationType", "location"})
+    @Query("select a from Appointment a where a.id = :id")
+    Optional<Appointment> findDetailedById(Long id);
+
+    @EntityGraph(attributePaths = {"patient", "practitioner", "consultationType", "location"})
+    List<Appointment> findByPatientIdOrderByStartAsc(Long patientId);
+
+    @EntityGraph(attributePaths = {"patient", "practitioner", "consultationType", "location"})
+    List<Appointment> findByPractitionerIdOrderByStartAsc(Long practitionerId);
 }

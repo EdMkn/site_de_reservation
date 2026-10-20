@@ -40,7 +40,12 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Réservations simultanées : la garantie vient de PostgreSQL, pas du code Java.
+ * Réservations simultanées : un seul gagnant, et des perdants qui reçoivent tous une
+ * erreur métier (jamais un interblocage ni une erreur 500).
+ *
+ * La garantie vient de PostgreSQL, pas de code Java synchronisé : les verrous de ligne
+ * (praticien puis patient) font passer les réservations d'un même agenda l'une après
+ * l'autre, et les contraintes d'exclusion refusent tout chevauchement restant.
  *
  * Volontairement SANS @Transactional sur la classe : chaque thread doit avoir sa propre
  * transaction, et voir des données de départ réellement commitées. En contrepartie,
@@ -99,8 +104,8 @@ class BookingConcurrencyIT {
         Outcome outcome = runSimultaneously(attempts);
 
         assertThat(outcome.successes()).isEqualTo(1);
-        // Les perdants sont refusés soit par la vérification applicative (le gagnant a déjà
-        // commité), soit par la contrainte d'exclusion (course) : même exception dans les deux cas.
+        // Les perdants ont attendu le verrou du praticien, puis la vérification applicative a
+        // vu le rendez-vous du gagnant. Aucun ne doit échouer autrement (interblocage, 500...).
         assertThat(outcome.failures()).hasSize(THREADS - 1)
                 .allMatch(e -> e instanceof SlotUnavailableException);
         assertThat(confirmedAppointments()).isEqualTo(1);
@@ -113,8 +118,9 @@ class BookingConcurrencyIT {
         ConsultationType typeB = tx.execute(s -> doctorWorkingMondayMorning("b@example.com", "22222222222"));
         Long patientId = tx.execute(s -> newPatient());
 
-        // Les deux agendas sont libres : la vérification applicative laisse passer les deux,
-        // seule la contrainte côté patient peut départager.
+        // Les deux agendas sont libres : la vérification applicative laisse passer les deux.
+        // Le verrou du patient les fait passer l'une après l'autre, et c'est la contrainte
+        // d'exclusion côté patient qui refuse la seconde.
         Outcome outcome = runSimultaneously(List.of(
                 () -> booking.book(patientId, typeA.getPractitioner().getId(), typeA.getId(),
                         Modality.PRESENTIEL, cabinet.getId(), SLOT, null),

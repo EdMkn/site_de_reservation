@@ -1,5 +1,8 @@
 package com.emakon.reservation.api;
 
+import com.emakon.reservation.domain.CancellationNotAllowedException;
+import com.emakon.reservation.service.AccessForbiddenException;
+import com.emakon.reservation.service.InvalidCredentialsException;
 import com.emakon.reservation.service.InvalidPeriodException;
 import com.emakon.reservation.service.NotFoundException;
 import com.emakon.reservation.service.PatientUnavailableException;
@@ -34,7 +37,22 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
-    // Deux conflits, même statut 409 : le champ "type" (stable, à tester côté frontend)
+    @ExceptionHandler(InvalidCredentialsException.class)
+    ProblemDetail handleInvalidCredentials(InvalidCredentialsException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(AccessForbiddenException.class)
+    ProblemDetail handleForbidden(AccessForbiddenException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler(CancellationNotAllowedException.class)
+    ProblemDetail handleCancellationNotAllowed(CancellationNotAllowedException e) {
+        return conflict("/problems/cancellation-not-allowed", "Annulation impossible", e.getMessage());
+    }
+
+    // Deux conflits de réservation, même statut 409 : le champ "type" (stable, à tester côté frontend)
     // les distingue ; "detail" est destiné à l'humain et peut changer.
 
     @ExceptionHandler(SlotUnavailableException.class)
