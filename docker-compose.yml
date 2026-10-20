@@ -5,8 +5,10 @@ services:
       POSTGRES_DB: reservation
       POSTGRES_USER: reservation
       POSTGRES_PASSWORD: ${DB_PASSWORD:-reservation}
+    # Port côté hôte configurable (DB_PORT dans .env) si 5432 est déjà pris en local ;
+    # dans le réseau Docker, l'API joint toujours la base sur db:5432.
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     # L'API ne démarre que lorsque PostgreSQL accepte réellement les connexions
@@ -24,8 +26,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-reservation}
       # Charge les données de démonstration (db/seed/R__seed.sql)
       SPRING_PROFILES_ACTIVE: demo
+    # Port côté hôte configurable (API_PORT dans .env) ; l'API écoute toujours sur 8080
+    # dans le conteneur.
     ports:
-      - "8080:8080"
+      - "${API_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy

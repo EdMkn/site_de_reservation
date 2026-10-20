@@ -60,10 +60,12 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+        <!-- Scope compile (et non runtime) : BookingService lit le nom de la contrainte
+             violée dans PSQLException, Hibernate ne l'extrayant pas pour les
+             contraintes d'exclusion (SQLSTATE 23P01). -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- Swagger UI + spécification OpenAPI générée à partir des contrôleurs -->

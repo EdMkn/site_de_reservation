@@ -2,6 +2,9 @@ package com.emakon.reservation.api;
 
 import com.emakon.reservation.service.InvalidPeriodException;
 import com.emakon.reservation.service.NotFoundException;
+import com.emakon.reservation.service.PatientUnavailableException;
+import com.emakon.reservation.service.SlotUnavailableException;
+import java.net.URI;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -29,5 +32,25 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InvalidPeriodException.class)
     ProblemDetail handleInvalidPeriod(InvalidPeriodException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    // Deux conflits, même statut 409 : le champ "type" (stable, à tester côté frontend)
+    // les distingue ; "detail" est destiné à l'humain et peut changer.
+
+    @ExceptionHandler(SlotUnavailableException.class)
+    ProblemDetail handleSlotUnavailable(SlotUnavailableException e) {
+        return conflict("/problems/slot-unavailable", "Créneau indisponible", e.getMessage());
+    }
+
+    @ExceptionHandler(PatientUnavailableException.class)
+    ProblemDetail handlePatientUnavailable(PatientUnavailableException e) {
+        return conflict("/problems/patient-unavailable", "Patient déjà occupé", e.getMessage());
+    }
+
+    private static ProblemDetail conflict(String type, String title, String detail) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, detail);
+        problem.setType(URI.create(type));
+        problem.setTitle(title);
+        return problem;
     }
 }

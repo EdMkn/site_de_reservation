@@ -1,10 +1,14 @@
+# Port HTTP, configurable pour un lancement local (./mvnw spring-boot:run) si 8080 est pris.
+server:
+  port: ${API_PORT:8080}
+
 spring:
   application:
     name: reservation
   # Valeurs par défaut pour le développement local (base lancée par `docker compose up -d db`).
   # En conteneur, elles sont surchargées par les variables d'environnement de docker-compose.yml.
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/reservation}
+    url: ${DB_URL:jdbc:postgresql://localhost:${DB_PORT:5432}/reservation}
     username: ${DB_USER:reservation}
     password: ${DB_PASSWORD:reservation}
   jpa:

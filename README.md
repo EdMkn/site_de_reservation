@@ -26,6 +26,19 @@ cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
 - Swagger UI : http://localhost:8080/swagger-ui.html
 - Santé : http://localhost:8080/actuator/health
 
+### Ports
+
+Par défaut : API sur 8080, PostgreSQL sur 5432. Si l'un est déjà pris sur la machine,
+créer un fichier `.env` à la racine (ignoré par Git), lu automatiquement par docker compose :
+
+```bash
+API_PORT=8081
+DB_PORT=5433
+```
+
+Pour l'API lancée en local, passer les mêmes variables :
+`API_PORT=8081 DB_PORT=5433 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo`.
+
 ### Données de démonstration
 
 Le profil Spring `demo` (activé par docker-compose) charge `db/seed/R__seed.sql` :
