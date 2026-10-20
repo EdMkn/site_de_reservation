@@ -41,6 +41,9 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         // Comme sur Doctolib, on consulte les créneaux sans être connecté.
                         .requestMatchers(HttpMethod.GET, "/api/practitioners/*/availability").permitAll()
+                        // L'annuaire aussi : on choisit son praticien avant de se connecter.
+                        .requestMatchers(HttpMethod.GET, "/api/practitioners", "/api/practitioners/*",
+                                "/api/specialties").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         // Seul un patient réserve : l'identité du patient est celle du jeton.
                         .requestMatchers(HttpMethod.POST, "/api/appointments").hasRole("PATIENT")

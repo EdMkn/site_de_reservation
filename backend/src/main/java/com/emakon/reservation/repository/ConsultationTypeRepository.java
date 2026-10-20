@@ -1,6 +1,7 @@
 package com.emakon.reservation.repository;
 
 import com.emakon.reservation.domain.ConsultationType;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,4 +13,6 @@ public interface ConsultationTypeRepository extends JpaRepository<ConsultationTy
      * practitioner.id et "ActiveTrue" en active = true.
      */
     Optional<ConsultationType> findByIdAndPractitionerIdAndActiveTrue(Long id, Long practitionerId);
+
+    List<ConsultationType> findByPractitionerIdAndActiveTrueOrderByLabelAsc(Long practitionerId);
 }
