@@ -7,8 +7,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Configuration TEMPORAIRE : seules la documentation Swagger, la sonde de santé et la
- * consultation des disponibilités sont publiques, tout le reste est refusé (403).
+ * Configuration TEMPORAIRE : seules la documentation Swagger, la sonde de santé, la
+ * consultation des disponibilités et la réservation sont publiques, tout le reste est
+ * refusé (403).
  * À remplacer par les vraies règles d'authentification et d'autorisation.
  */
 @Configuration
@@ -22,7 +23,12 @@ public class SecurityConfig {
                 // Comme sur Doctolib, on consulte les créneaux sans être connecté ;
                 // il faudra l'être pour réserver.
                 .requestMatchers(HttpMethod.GET, "/api/practitioners/*/availability").permitAll()
-                .anyRequest().denyAll());
+                // PROVISOIRE (étape 6) : réservation ouverte, le patient est désigné dans le corps.
+                .requestMatchers(HttpMethod.POST, "/api/appointments").permitAll()
+                .anyRequest().denyAll())
+            // PROVISOIRE : sans session ni cookie d'authentification, pas de risque CSRF.
+            // À réexaminer à l'étape 6 selon la façon dont le jeton est transmis.
+            .csrf(csrf -> csrf.disable());
         return http.build();
     }
 }
