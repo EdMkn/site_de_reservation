@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,11 @@ class AppointmentControllerIT {
     private Appointment jeanInTwoHours;   // Jean chez Martin, dans 2 h
     private Appointment aminaWithBenali;  // Amina chez Benali
 
+    private Location cabinet;
+    private ConsultationType martinType;
+    private Patient pJean;
+    private Patient pAmina;
+
     private String jean;
     private String amina;
     private String martin;
@@ -76,17 +82,17 @@ class AppointmentControllerIT {
     @BeforeEach
     void setUp() {
         String hash = passwordEncoder.encode("secret");
-        var cabinet = new Location("Cabinet", "1 rue A", "75001", "Paris");
+        cabinet = new Location("Cabinet", "1 rue A", "75001", "Paris");
         em.persist(cabinet);
         var drMartin = new Practitioner("martin@example.com", hash, "Martin", "Claire", "11111111111");
         var drBenali = new Practitioner("benali@example.com", hash, "Benali", "Karim", "22222222222");
-        var pJean = new Patient("jean@example.com", hash, "Dupont", "Jean", LocalDate.of(1990, 1, 1));
-        var pAmina = new Patient("amina@example.com", hash, "Diallo", "Amina", LocalDate.of(1992, 2, 2));
+        pJean = new Patient("jean@example.com", hash, "Dupont", "Jean", LocalDate.of(1990, 1, 1));
+        pAmina = new Patient("amina@example.com", hash, "Diallo", "Amina", LocalDate.of(1992, 2, 2));
         em.persist(drMartin);
         em.persist(drBenali);
         em.persist(pJean);
         em.persist(pAmina);
-        var martinType = new ConsultationType(drMartin, "Consultation", Duration.ofMinutes(30), false);
+        martinType = new ConsultationType(drMartin, "Consultation", Duration.ofMinutes(30), false);
         var benaliType = new ConsultationType(drBenali, "Dermatologie", Duration.ofMinutes(30), false);
         em.persist(martinType);
         em.persist(benaliType);
@@ -107,6 +113,18 @@ class AppointmentControllerIT {
 
     private ResultActions getAs(String token, String url) throws Exception {
         return mvc.perform(get(url).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+    }
+
+    /** Rendez-vous de 30 min chez Martin ; start avec son décalage, ex. "2026-11-02T10:00+01:00". */
+    private Appointment withMartin(Patient patient, String start) {
+        var a = new Appointment(patient, martinType, Modality.PRESENTIEL, cabinet,
+                OffsetDateTime.parse(start).toInstant(), null);
+        em.persist(a);
+        return a;
+    }
+
+    private static int id(Appointment a) {
+        return a.getId().intValue();
     }
 
     private ResultActions cancelAs(String token, Appointment appointment) throws Exception {
@@ -187,5 +205,59 @@ class AppointmentControllerIT {
         getAs(martin, "/api/appointments/" + jeanInAMonth.getId())
                 .andExpect(jsonPath("$.status").value("ANNULE_PATIENT"));
         cancelAs(martin, jeanInAMonth).andExpect(status().isConflict());
+    }
+
+    // --- Filtre par période (?from=&to=) ---
+    // Paris est en UTC+2 jusqu'au 25 octobre 2026 à 3 h, puis en UTC+1.
+
+    @Test
+    void periodKeepsOnlyAppointmentsStartingThatWeek() throws Exception {
+        var wednesday = withMartin(pJean, "2026-11-04T10:00+01:00");
+        var sundayLate = withMartin(pAmina, "2026-11-08T23:30+01:00");
+        withMartin(pJean, "2026-11-10T10:00+01:00"); // semaine suivante
+        em.flush();
+
+        // jeanInAMonth (31 octobre) et le 10 novembre sont hors période
+        getAs(martin, "/api/appointments?from=2026-11-02&to=2026-11-08")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id").value(contains(id(wednesday), id(sundayLate))));
+    }
+
+    @Test
+    void periodBoundsAreMidnightInThePracticeZone() throws Exception {
+        // Bornes calculées en UTC ([2 nov. 00:00Z, 9 nov. 00:00Z)) : ces deux cas seraient
+        // inversés, le premier exclu (1er nov. 23:00Z) et le second inclus (8 nov. 23:00Z).
+        var mondayMidnight = withMartin(pJean, "2026-11-02T00:00+01:00");
+        withMartin(pJean, "2026-11-09T00:00+01:00");
+        withMartin(pAmina, "2026-11-01T23:30+01:00"); // veille du premier jour
+        em.flush();
+
+        getAs(martin, "/api/appointments?from=2026-11-02&to=2026-11-08")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id").value(contains(id(mondayMidnight))));
+    }
+
+    @Test
+    void periodFilterStillOnlyReturnsTheUsersAppointments() throws Exception {
+        // jeanInAMonth (Martin) et aminaWithBenali (Benali) : même jour, le 31 octobre
+        String period = "/api/appointments?from=2026-10-26&to=2026-11-01";
+        getAs(martin, period).andExpect(jsonPath("$[*].id").value(contains(id(jeanInAMonth))));
+        getAs(benali, period).andExpect(jsonPath("$[*].id").value(contains(id(aminaWithBenali))));
+        getAs(jean, period).andExpect(jsonPath("$[*].id").value(contains(id(jeanInAMonth))));
+        getAs(amina, period).andExpect(jsonPath("$[*].id").value(contains(id(aminaWithBenali))));
+    }
+
+    @Test
+    void periodHandlesTheDaylightSavingChange() throws Exception {
+        // Le dimanche 25 octobre dure 25 h. Une fin calculée en "dernier jour à 00:00 + 24 h"
+        // (24 oct. 22:00Z + 24 h = 25 oct. 22:00Z) exclurait le rendez-vous de 23 h 30.
+        var mondayMidnight = withMartin(pJean, "2026-10-19T00:00+02:00");
+        var sundayLate = withMartin(pJean, "2026-10-25T23:30+01:00");
+        withMartin(pAmina, "2026-10-26T00:00+01:00"); // lundi suivant
+        em.flush();
+
+        getAs(martin, "/api/appointments?from=2026-10-19&to=2026-10-25")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id").value(contains(id(mondayMidnight), id(sundayLate))));
     }
 }
