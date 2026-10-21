@@ -18,7 +18,10 @@ services:
       timeout: 3s
       retries: 10
 
+  # image + build : `docker compose pull` récupère l'image publiée sur Docker Hub,
+  # `docker compose up --build` la reconstruit depuis les sources.
   api:
+    image: ${DOCKERHUB_USER:-edmkn}/reservation-api:${TAG:-latest}
     build: ./backend
     environment:
       DB_URL: jdbc:postgresql://db:5432/reservation
@@ -36,6 +39,7 @@ services:
 
   # Frontend : fichiers Angular servis par nginx, qui relaie aussi /api vers le service api.
   web:
+    image: ${DOCKERHUB_USER:-edmkn}/reservation-web:${TAG:-latest}
     build: ./frontend
     # Port côté hôte configurable (WEB_PORT dans .env) ; nginx écoute sur 8080 dans le
     # conteneur. 4200 par défaut, comme ng serve : même adresse en dev et avec Docker.

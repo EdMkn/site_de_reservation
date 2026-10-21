@@ -1,5 +1,7 @@
 # --- Étape 1 : build Angular (Node + dépendances de dev, jetées ensuite) ---
-FROM node:22-alpine AS build
+# --platform=$BUILDPLATFORM : comme pour le backend, le build tourne sans émulation ;
+# il produit des fichiers statiques, identiques quelle que soit l'architecture cible.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 
 # Comme pour le backend : d'abord ce qui décrit les dépendances, pour réutiliser la couche

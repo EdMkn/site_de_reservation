@@ -1,5 +1,7 @@
 # --- Étape 1 : compilation (JDK complet + Maven via le wrapper) ---
-FROM eclipse-temurin:21-jdk AS build
+# --platform=$BUILDPLATFORM : la compilation tourne toujours sur l'architecture de la machine
+# qui construit, sans émulation. Le jar produit est le même pour amd64 et arm64.
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
 # On copie d'abord uniquement ce qui décrit les dépendances : tant que pom.xml ne change pas,

@@ -31,6 +31,20 @@ cd frontend && npm ci && npm start
 - Swagger UI : http://localhost:8080/swagger-ui.html
 - Santé : http://localhost:8080/actuator/health
 
+### Lancer sans compiler (images Docker Hub)
+
+Les images de l'API et du frontend sont publiées sur Docker Hub par la CI à chaque push sur `main`
+(`edmkn/reservation-api` et `edmkn/reservation-web`, pour amd64 et arm64). Seuls Docker et le fichier
+`docker-compose.yml` sont nécessaires :
+
+```bash
+docker compose pull
+docker compose up
+```
+
+Étiquettes : `latest`, et le hash court de chaque commit pour lancer une version précise
+(`TAG=1215d74 docker compose up`).
+
 ### Ports
 
 Par défaut : frontend sur 4200, API sur 8080, PostgreSQL sur 5432. Si l'un est déjà pris sur la machine,
