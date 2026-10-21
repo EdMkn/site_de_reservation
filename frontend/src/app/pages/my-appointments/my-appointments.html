@@ -1,0 +1,50 @@
+<h1>Mes rendez-vous</h1>
+
+@if (justBooked(); as a) {
+  <div class="alert alert-success" role="status">
+    Rendez-vous confirmé : {{ formatDateTime(a.start) }} avec {{ a.practitionerName }}.
+  </div>
+}
+
+@let state = appointments();
+@if (state.status === 'loading') {
+  <p class="muted">Chargement…</p>
+} @else if (state.status === 'error') {
+  <div class="alert alert-error">Impossible de charger vos rendez-vous. Réessayez plus tard.</div>
+} @else {
+  <section>
+    <h2>À venir</h2>
+    @for (a of upcoming(); track a.id) {
+      <article class="card appointment" [class.highlight]="a.id === justBooked()?.id">
+        <app-appointment-summary [appointment]="a" />
+        <div class="actions">
+          @if (canCancel(a)) {
+            <button type="button" class="btn btn-danger" [disabled]="cancelling() === a.id" (click)="cancel(a)">
+              {{ cancelling() === a.id ? 'Annulation…' : 'Annuler' }}
+            </button>
+          } @else {
+            <button type="button" class="btn btn-danger" disabled>Annuler</button>
+            <span class="muted hint">Annulation en ligne impossible à moins de 24 h. Contactez le cabinet.</span>
+          }
+        </div>
+        @if (cancelError()?.id === a.id) {
+          <div class="alert alert-error" role="alert">{{ cancelError()!.message }}</div>
+        }
+      </article>
+    } @empty {
+      <p class="muted">Aucun rendez-vous à venir. <a routerLink="/">Trouver un praticien</a></p>
+    }
+  </section>
+
+  @if (history().length) {
+    <section>
+      <h2>Historique</h2>
+      @for (a of history(); track a.id) {
+        <article class="card appointment past">
+          <app-appointment-summary [appointment]="a" />
+        </article>
+      }
+    </section>
+  }
+}
+

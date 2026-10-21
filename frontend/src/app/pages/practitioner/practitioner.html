@@ -1,0 +1,89 @@
+<a routerLink="/" class="back">← Tous les praticiens</a>
+
+@let state = detail();
+@if (state.status === 'loading') {
+  <p class="muted">Chargement…</p>
+} @else if (state.status === 'error') {
+  <div class="alert alert-error">Ce praticien est introuvable ou n'est plus disponible.</div>
+} @else {
+  @let p = state.data;
+  <section class="card profile">
+    <span class="avatar" aria-hidden="true">{{ p.firstName[0] }}{{ p.lastName[0] }}</span>
+    <div>
+      <h1>{{ p.firstName }} {{ p.lastName }}</h1>
+      <div class="tags">
+        @for (s of p.specialties; track s.id) {
+          <span class="tag">{{ s.label }}</span>
+        }
+      </div>
+      @if (p.presentation) {
+        <p>{{ p.presentation }}</p>
+      }
+      @for (l of p.locations; track l.id) {
+        <p class="muted location">{{ l.name }} — {{ l.address }}, {{ l.postalCode }} {{ l.city }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="card booking">
+    <h2>Prendre rendez-vous</h2>
+
+    @if (p.consultationTypes.length === 0) {
+      <p class="muted">Ce praticien ne propose pas de rendez-vous en ligne.</p>
+    } @else {
+      <div class="field motif">
+        <label for="motif">Motif de consultation</label>
+        <select #select id="motif" (change)="selectType(select.value)">
+          @if (!selectedType()) {
+            <option value="" selected disabled>Choisissez un motif</option>
+          }
+          @for (t of p.consultationTypes; track t.id) {
+            <option [value]="t.id" [selected]="t.id === selectedType()?.id">
+              {{ t.label }} ({{ t.durationMinutes }} min{{ t.remoteAllowed ? ', visio possible' : '' }})
+            </option>
+          }
+        </select>
+      </div>
+
+      @if (selectedType()) {
+        <div class="week-nav">
+          <button type="button" class="btn btn-secondary" [disabled]="weekStart() === currentMonday" (click)="changeWeek(-1)">
+            ← Semaine précédente
+          </button>
+          <span class="muted">Semaine du {{ formatDay(weekStart()) }}</span>
+          <button type="button" class="btn btn-secondary" (click)="changeWeek(1)">Semaine suivante →</button>
+        </div>
+
+        @let slotState = slots();
+        @if (slotState?.status === 'error') {
+          <div class="alert alert-error">Impossible de charger les créneaux. Réessayez plus tard.</div>
+        } @else {
+          <div class="week" [class.loading]="slotState?.status !== 'ok'">
+            @for (day of days(); track day) {
+              <div class="day">
+                <div class="day-label">{{ formatDay(day) }}</div>
+                @for (slot of slotsByDay().get(day) ?? []; track slot.start + slot.modality) {
+                  <button type="button" class="slot" [class.remote]="slot.modality === 'DISTANCIEL'" (click)="book(slot)">
+                    {{ formatTime(slot.start) }}
+                    @if (slot.modality === 'DISTANCIEL') {
+                      <small>visio</small>
+                    } @else if (locationLabel(slot); as city) {
+                      <small>{{ city }}</small>
+                    }
+                  </button>
+                } @empty {
+                  @if (slotState?.status === 'ok') {
+                    <span class="none">—</span>
+                  }
+                }
+              </div>
+            }
+          </div>
+          @if (slotState?.status === 'ok' && slotsByDay().size === 0) {
+            <p class="muted">Aucun créneau disponible cette semaine.</p>
+          }
+        }
+      }
+    }
+  </section>
+}

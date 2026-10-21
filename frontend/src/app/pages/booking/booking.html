@@ -1,0 +1,68 @@
+<div class="booking">
+  <h1>Confirmer le rendez-vous</h1>
+
+  @let state = detail();
+  @let s = summary();
+  @if (state.status === 'loading') {
+    <p class="muted">Chargement…</p>
+  } @else if (!s) {
+    <div class="alert alert-error">
+      Ce lien de réservation n'est pas valide.
+      <a routerLink="/">Retour aux praticiens</a>
+    </div>
+  } @else {
+    <section class="card">
+      <dl class="summary">
+        <dt>Praticien</dt>
+        <dd>{{ s.practitioner.firstName }} {{ s.practitioner.lastName }}</dd>
+        <dt>Motif</dt>
+        <dd>{{ s.type.label }} ({{ s.type.durationMinutes }} min)</dd>
+        <dt>Date</dt>
+        <dd class="when">{{ s.when }}</dd>
+        <dt>Lieu</dt>
+        <dd>
+          @if (s.location) {
+            {{ s.location.name }}<br />
+            <span class="muted">{{ s.location.address }}, {{ s.location.postalCode }} {{ s.location.city }}</span>
+          } @else {
+            Téléconsultation (lien envoyé par le praticien)
+          }
+        </dd>
+      </dl>
+
+      @switch (failure()) {
+        @case ('slot-taken') {
+          <div class="alert alert-error" role="alert">
+            Ce créneau vient d'être réservé ou n'est plus disponible.
+            <a [routerLink]="backToSlots().path" [queryParams]="backToSlots().query">Choisir un autre créneau</a>
+          </div>
+        }
+        @case ('patient-busy') {
+          <div class="alert alert-error" role="alert">
+            Vous avez déjà un rendez-vous qui chevauche ce créneau.
+            <a routerLink="/mes-rendez-vous">Voir mes rendez-vous</a>
+          </div>
+        }
+        @case ('other') {
+          <div class="alert alert-error" role="alert">La réservation a échoué. Réessayez plus tard.</div>
+        }
+      }
+
+      <div class="field">
+        <label for="note">Note pour le praticien <span class="muted">(facultatif)</span></label>
+        <textarea id="note" rows="3" [formControl]="note" [maxlength]="noteMaxLength"
+          placeholder="Ex. : renouvellement d'ordonnance, symptômes…"></textarea>
+        <span class="muted counter">{{ note.value.length }} / {{ noteMaxLength }}</span>
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-secondary" [routerLink]="backToSlots().path" [queryParams]="backToSlots().query">Retour</a>
+        <!-- Désactivé après un refus du créneau : réessayer donnerait la même réponse. -->
+        <button type="button" class="btn" (click)="confirm()"
+          [disabled]="submitting() || failure() === 'slot-taken' || failure() === 'patient-busy'">
+          {{ submitting() ? 'Réservation…' : 'Confirmer' }}
+        </button>
+      </div>
+    </section>
+  }
+</div>
