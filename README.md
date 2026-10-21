@@ -45,13 +45,12 @@ docker compose up
 Étiquettes des images :
 
 - `latest` : la dernière version de `main` ;
-- `1.0.0`, `1.0`… : les versions publiées (`1.0` suit les correctifs de la 1.0) ;
-- le hash court de chaque commit, par exemple `1215d74`.
+- `1.0.0`, `1.1.0`… : les versions publiées.
 
 Pour lancer une version précise : `TAG=1.0.0 docker compose up`.
 
 Publier une version : `git tag v1.0.0 && git push origin v1.0.0`. La CI relance tous les tests
-puis publie les images `1.0.0` et `1.0`.
+puis publie les images `1.0.0`.
 
 ### Ports
 

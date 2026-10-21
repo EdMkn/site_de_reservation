@@ -90,8 +90,8 @@ jobs:
 
       # Étiquettes des images :
       # - latest : la dernière version de main, pour `docker compose pull` ;
-      # - le hash court du commit (1215d74), sur chaque publication ;
-      # - sur une étiquette Git v1.2.3 : 1.2.3, et 1.2 qui suit les correctifs de la 1.2.
+      # - sur une étiquette Git v1.2.3 : 1.2.3.
+      # Le commit exact reste lisible dans le label org.opencontainers.image.revision.
       - name: Étiquettes
         id: meta
         if: env.PUBLISH == 'true'
@@ -102,9 +102,7 @@ jobs:
           flavor: latest=false
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=,format=short
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
 
       # amd64 pour les serveurs et la plupart des PC, arm64 pour les Mac M1+ et les serveurs ARM.
       # Cache GitHub Actions : les couches inchangées (dépendances Maven, npm ci) sont réutilisées.
