@@ -34,5 +34,15 @@ services:
       db:
         condition: service_healthy
 
+  # Frontend : fichiers Angular servis par nginx, qui relaie aussi /api vers le service api.
+  web:
+    build: ./frontend
+    # Port côté hôte configurable (WEB_PORT dans .env) ; nginx écoute sur 8080 dans le
+    # conteneur. 4200 par défaut, comme ng serve : même adresse en dev et avec Docker.
+    ports:
+      - "${WEB_PORT:-4200}:8080"
+    depends_on:
+      - api
+
 volumes:
   db-data:

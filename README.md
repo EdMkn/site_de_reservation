@@ -8,36 +8,43 @@ base PostgreSQL et frontend Angular.
 - Java 21, Spring Boot 3 (Web, Data JPA, Security, Validation), Maven
 - PostgreSQL 16, migrations Flyway
 - Tests : JUnit 5, Mockito, Testcontainers
-- Docker / docker-compose, CI GitHub Actions
+- Angular 22 (composants standalone, signals), SCSS
+- Docker / docker-compose (nginx pour le frontend), CI GitHub Actions
 
 ## Démarrage
 
-Prérequis : Java 21 et Docker.
+Prérequis : Docker ; pour le développement, Java 21 et Node 22 (`nvm use` dans `frontend/`).
 
 ```bash
-# Environnement complet (API + base)
+# Environnement complet (frontend + API + base)
 docker compose up --build
 
-# Ou en développement : base dans Docker, API en local
+# Ou en développement : base dans Docker, API et frontend en local
 docker compose up -d db
 cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
+cd frontend && npm ci && npm start
 ```
+
+- Application : http://localhost:4200 (en développement, `ng serve` relaie `/api` vers l'API
+  grâce à `proxy.conf.mjs` ; avec Docker, c'est nginx qui le fait)
 
 - Swagger UI : http://localhost:8080/swagger-ui.html
 - Santé : http://localhost:8080/actuator/health
 
 ### Ports
 
-Par défaut : API sur 8080, PostgreSQL sur 5432. Si l'un est déjà pris sur la machine,
+Par défaut : frontend sur 4200, API sur 8080, PostgreSQL sur 5432. Si l'un est déjà pris sur la machine,
 créer un fichier `.env` à la racine (ignoré par Git), lu automatiquement par docker compose :
 
 ```bash
+WEB_PORT=4201
 API_PORT=8081
 DB_PORT=5433
 ```
 
-Pour l'API lancée en local, passer les mêmes variables :
-`API_PORT=8081 DB_PORT=5433 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo`.
+En local, passer les mêmes variables à l'API et au serveur de développement Angular :
+`API_PORT=8081 DB_PORT=5433 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo`,
+puis `API_PORT=8081 npm start`.
 
 ### Données de démonstration
 
@@ -64,7 +71,13 @@ suivant le chargement ; pour les régénérer : `docker compose down -v && docke
 cd backend
 ./mvnw test     # tests unitaires
 ./mvnw verify   # + tests d'intégration (Docker requis)
+
+cd frontend
+npx ng test --watch=false   # tests unitaires (Vitest)
 ```
+
+Vitest ne fonctionne pas si le chemin du projet contient un `#` (Vite le prend pour une
+ancre d'URL) : cloner le dépôt dans un dossier sans ce caractère.
 
 ## Structure
 

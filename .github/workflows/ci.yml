@@ -25,10 +25,33 @@ jobs:
       - name: Build et tests
         run: ./mvnw -B verify
 
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version de Node lue dans .nvmrc : la même qu'en local.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      # Compilation de production : templates vérifiés (types compris) et budgets de taille.
+      - name: Build
+        run: npm run build
+      # Vitest + jsdom : pas de navigateur à installer.
+      - name: Tests
+        run: npx ng test --watch=false
+
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Vérifie que l'image de l'API se construit toujours
-      - name: Build de l'image
-        run: docker compose build api
+      # Vérifie que les images de l'API et du frontend se construisent toujours
+      - name: Build des images
+        run: docker compose build api web
