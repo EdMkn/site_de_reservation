@@ -1,0 +1,23 @@
+.login {
+  display: grid;
+  gap: 1rem;
+  max-width: 420px;
+  margin: 1rem auto 0;
+}
+
+.submit {
+  width: 100%;
+}
+
+.demo {
+  font-size: 0.9rem;
+
+  h2 {
+    font-size: 1rem;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+}

@@ -1,0 +1,48 @@
+<section class="hero">
+  <h1>Trouvez un praticien</h1>
+  <p class="muted">Choisissez un praticien, un motif, puis un créneau disponible.</p>
+
+  <div class="field filter">
+    <label for="specialty">Spécialité</label>
+    <!-- [selected] sur chaque option plutôt que [value] sur le select : les options arrivent
+         après coup (requête HTTP), et un select ne peut pas valoir une option qui n'existe pas encore. -->
+    <select #select id="specialty" (change)="selectSpecialty(select.value)">
+      <option value="">Toutes les spécialités</option>
+      @for (s of specialties(); track s.id) {
+        <option [value]="s.id" [selected]="s.id === specialtyId()">{{ s.label }}</option>
+      }
+    </select>
+  </div>
+</section>
+
+<!-- @let + @if : le compilateur affine le type de state, state.data n'existe que si 'ok'. -->
+@let state = practitioners();
+@if (state.status === 'loading') {
+  <p class="muted">Chargement…</p>
+} @else if (state.status === 'error') {
+  <div class="alert alert-error">Impossible de charger les praticiens. Réessayez plus tard.</div>
+} @else {
+  @if (state.data.length === 0) {
+    <p class="muted">Aucun praticien pour cette spécialité.</p>
+  }
+  <ul class="grid">
+    @for (p of state.data; track p.id) {
+      <li>
+        <a class="card practitioner" [routerLink]="['/praticiens', p.id]">
+          <span class="avatar" aria-hidden="true">{{ p.firstName[0] }}{{ p.lastName[0] }}</span>
+          <span class="info">
+            <strong>{{ p.firstName }} {{ p.lastName }}</strong>
+            <span class="tags">
+              @for (s of p.specialties; track s.id) {
+                <span class="tag">{{ s.label }}</span>
+              }
+            </span>
+            <span class="muted">
+              {{ p.cities.length ? p.cities.join(', ') : 'Téléconsultation' }}
+            </span>
+          </span>
+        </a>
+      </li>
+    }
+  </ul>
+}
