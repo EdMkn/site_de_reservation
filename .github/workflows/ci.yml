@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # Une étiquette Git de version (git tag v1.0.0 && git push --tags) relance la CI
+    # et publie les images avec ce numéro.
+    tags: ["v*.*.*"]
   pull_request:
 
 jobs:
@@ -56,12 +59,13 @@ jobs:
       - name: Build des images
         run: docker compose build api web
 
-  # Publie les images sur Docker Hub, seulement sur main et seulement si tout est vert.
+  # Publie les images sur Docker Hub, sur main ou sur une étiquette de version,
+  # et seulement si tout est vert.
   # Secrets à créer dans GitHub (Settings > Secrets and variables > Actions) :
   # DOCKERHUB_USERNAME et DOCKERHUB_TOKEN (jeton d'accès Docker Hub, pas le mot de passe).
   publish:
     needs: [backend, frontend, docker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -83,13 +87,22 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # latest pour `docker compose pull`, et le hash court du commit pour savoir
-      # quelle version tourne et pouvoir revenir à une version précise.
+      # Étiquettes des images :
+      # - latest : la dernière version de main, pour `docker compose pull` ;
+      # - le hash court du commit (1215d74), sur chaque publication ;
+      # - sur une étiquette Git v1.2.3 : 1.2.3, et 1.2 qui suit les correctifs de la 1.2.
       - name: Étiquettes
-        id: tags
-        run: |
-          repo="${{ secrets.DOCKERHUB_USERNAME }}/reservation-${{ matrix.image }}"
-          echo "list=$repo:latest,$repo:${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/reservation-${{ matrix.image }}
+          # Sans ça, metadata-action déplacerait aussi latest à chaque étiquette de version.
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       # amd64 pour les serveurs et la plupart des PC, arm64 pour les Mac M1+ et les serveurs ARM.
       - uses: docker/build-push-action@v6
@@ -97,6 +110,8 @@ jobs:
           context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.tags.outputs.list }}
+          tags: ${{ steps.meta.outputs.tags }}
+          # Labels OCI (dépôt source, commit, date) : Docker Hub relie l'image à son code.
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
