@@ -51,22 +51,16 @@ jobs:
       - name: Tests
         run: npx ng test --watch=false
 
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Vérifie que les images de l'API et du frontend se construisent toujours
-      - name: Build des images
-        run: docker compose build api web
-
-  # Publie les images sur Docker Hub, sur main ou sur une étiquette de version,
-  # et seulement si tout est vert.
+  # Construit les images de l'API et du frontend (amd64 et arm64), après les tests.
+  # Sur une pull request : simple vérification, rien n'est poussé.
+  # Sur main ou une étiquette de version : publication sur Docker Hub.
   # Secrets à créer dans GitHub (Settings > Secrets and variables > Actions) :
   # DOCKERHUB_USERNAME et DOCKERHUB_TOKEN (jeton d'accès Docker Hub, pas le mot de passe).
-  publish:
-    needs: [backend, frontend, docker]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+  images:
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
     strategy:
       matrix:
         image: [api, web]
@@ -78,11 +72,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Remplace l'ancien `docker compose build` : le fichier compose doit rester valide.
+      - name: Vérification de docker-compose.yml
+        run: docker compose config --quiet
+
       # QEMU émule arm64 pour les étapes d'exécution ; buildx construit plusieurs architectures.
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
+      # Les étapes suivantes ne servent qu'à publier. Sur une pull request venant d'un fork,
+      # les secrets ne sont de toute façon pas transmis.
       - uses: docker/login-action@v3
+        if: env.PUBLISH == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -93,6 +94,7 @@ jobs:
       # - sur une étiquette Git v1.2.3 : 1.2.3, et 1.2 qui suit les correctifs de la 1.2.
       - name: Étiquettes
         id: meta
+        if: env.PUBLISH == 'true'
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/reservation-${{ matrix.image }}
@@ -105,11 +107,15 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       # amd64 pour les serveurs et la plupart des PC, arm64 pour les Mac M1+ et les serveurs ARM.
+      # Cache GitHub Actions : les couches inchangées (dépendances Maven, npm ci) sont réutilisées.
+      # Une pull request lit le cache de main ; main ne lit pas celui d'une pull request
+      # (règle d'isolation des caches de GitHub).
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ env.PUBLISH == 'true' }}
+          # Vides sur une pull request (étape "Étiquettes" sautée) : image construite sans nom.
           tags: ${{ steps.meta.outputs.tags }}
           # Labels OCI (dépôt source, commit, date) : Docker Hub relie l'image à son code.
           labels: ${{ steps.meta.outputs.labels }}
