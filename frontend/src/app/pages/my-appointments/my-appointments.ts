@@ -6,7 +6,7 @@ import { AppointmentsService } from '../../core/api/appointments.service';
 import { Appointment, CANCELLATION_NOT_ALLOWED } from '../../core/api/models';
 import { formatDateTime } from '../../core/datetime';
 import { LoadState, toLoadState } from '../../core/load-state';
-import { AppointmentSummary } from './appointment-summary';
+import { AppointmentSummary } from '../../shared/appointment-summary';
 
 /** Même délai que Appointment.PATIENT_CANCELLATION_NOTICE côté serveur. */
 const CANCELLATION_NOTICE_MS = 24 * 60 * 60 * 1000;

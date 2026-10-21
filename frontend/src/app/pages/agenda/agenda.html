@@ -1,0 +1,53 @@
+<h1>Mon agenda</h1>
+
+<div class="toolbar">
+  <div class="week-nav">
+    <button type="button" class="btn btn-secondary" (click)="changeWeek(-1)">←</button>
+    <span class="week-label">Semaine du {{ formatDay(weekStart()) }}</span>
+    <button type="button" class="btn btn-secondary" (click)="changeWeek(1)">→</button>
+    @if (weekStart() !== currentMonday) {
+      <button type="button" class="btn btn-secondary" (click)="goToWeek(currentMonday)">Cette semaine</button>
+    }
+  </div>
+
+  <label class="toggle">
+    <input type="checkbox" [checked]="showCancelled()" (change)="showCancelled.set(!showCancelled())" />
+    Afficher les annulés
+    @if (cancelledCount()) {
+      <span class="muted">({{ cancelledCount() }})</span>
+    }
+  </label>
+</div>
+
+@let state = appointments();
+@if (state.status === 'error') {
+  <div class="alert alert-error">Impossible de charger l'agenda. Réessayez plus tard.</div>
+} @else {
+  <div class="days" [class.loading]="state.status === 'loading'">
+    @for (day of days(); track day) {
+      @let list = byDay().get(day) ?? [];
+      <section class="day" [class.today]="day === currentDayKey">
+        <h2>{{ formatDay(day) }}</h2>
+        @for (a of list; track a.id) {
+          <article class="card appointment" [class.cancelled]="a.status !== 'CONFIRME'">
+            <app-appointment-summary [appointment]="a" viewpoint="practitioner" />
+            @if (canCancel(a)) {
+              <div class="actions">
+                <button type="button" class="btn btn-danger" [disabled]="cancelling() === a.id" (click)="cancel(a)">
+                  {{ cancelling() === a.id ? 'Annulation…' : 'Annuler' }}
+                </button>
+              </div>
+            }
+            @if (cancelError()?.id === a.id) {
+              <div class="alert alert-error" role="alert">{{ cancelError()!.message }}</div>
+            }
+          </article>
+        } @empty {
+          @if (state.status === 'ok') {
+            <p class="muted empty">Aucun rendez-vous</p>
+          }
+        }
+      </section>
+    }
+  </div>
+}

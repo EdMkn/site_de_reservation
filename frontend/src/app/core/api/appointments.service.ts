@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Appointment, BookingRequest, BookingResponse } from './models';
@@ -8,9 +8,14 @@ import { Appointment, BookingRequest, BookingResponse } from './models';
 export class AppointmentsService {
   private readonly http = inject(HttpClient);
 
-  /** Patient : ses rendez-vous ; praticien : son agenda. Le serveur choisit selon le jeton. */
-  mine(): Observable<Appointment[]> {
-    return this.http.get<Appointment[]>('/api/appointments');
+  /**
+   * Patient : ses rendez-vous ; praticien : son agenda. Le serveur choisit selon le jeton.
+   * Avec une période (jours "2026-11-02", bornes incluses, 31 jours au plus), seulement
+   * les rendez-vous qui commencent dans cette période.
+   */
+  mine(period?: { from: string; to: string }): Observable<Appointment[]> {
+    const params = period ? new HttpParams().set('from', period.from).set('to', period.to) : undefined;
+    return this.http.get<Appointment[]>('/api/appointments', { params });
   }
 
   get(id: number): Observable<Appointment> {

@@ -1,0 +1,75 @@
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.week-label {
+  font-weight: 600;
+  min-width: 11rem;
+  text-align: center;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: opacity 0.15s;
+
+  &.loading {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+}
+
+.day {
+  h2 {
+    font-size: 1rem;
+    text-transform: capitalize;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  &.today h2 {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+  }
+}
+
+.appointment {
+  margin-bottom: 0.6rem;
+
+  &.cancelled {
+    opacity: 0.6;
+  }
+
+  .alert {
+    margin: 0.5rem 0 0;
+  }
+}
+
+.actions {
+  margin-top: 0.5rem;
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.9rem;
+}

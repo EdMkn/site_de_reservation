@@ -47,4 +47,24 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @EntityGraph(attributePaths = {"patient", "practitioner", "consultationType", "location"})
     List<Appointment> findByPractitionerIdOrderByStartAsc(Long practitionerId);
+
+    // Variantes bornées : rendez-vous qui COMMENCENT dans [from, to). Servies par les index
+    // (patient_id, debut) et (praticien_id, debut) de V1__init.sql : PostgreSQL ne lit que
+    // les lignes de la période, quel que soit le nombre d'années d'historique.
+
+    @EntityGraph(attributePaths = {"patient", "practitioner", "consultationType", "location"})
+    @Query("""
+            select a from Appointment a
+            where a.patient.id = :patientId and a.start >= :from and a.start < :to
+            order by a.start
+            """)
+    List<Appointment> findByPatientInPeriod(Long patientId, Instant from, Instant to);
+
+    @EntityGraph(attributePaths = {"patient", "practitioner", "consultationType", "location"})
+    @Query("""
+            select a from Appointment a
+            where a.practitioner.id = :practitionerId and a.start >= :from and a.start < :to
+            order by a.start
+            """)
+    List<Appointment> findByPractitionerInPeriod(Long practitionerId, Instant from, Instant to);
 }

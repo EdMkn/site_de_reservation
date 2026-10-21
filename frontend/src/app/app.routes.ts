@@ -22,6 +22,12 @@ export const routes: Routes = [
     canActivate: [requireRole('PATIENT')],
     loadComponent: () => import('./pages/my-appointments/my-appointments').then((m) => m.MyAppointmentsPage),
   },
+  {
+    path: 'agenda',
+    title: 'Mon agenda',
+    canActivate: [requireRole('PRATICIEN')],
+    loadComponent: () => import('./pages/agenda/agenda').then((m) => m.AgendaPage),
+  },
   { path: 'connexion', title: 'Connexion', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   { path: '**', redirectTo: '' },
 ];

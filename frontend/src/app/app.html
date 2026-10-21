@@ -12,6 +12,9 @@
       @if (session.role() === 'PATIENT') {
         <a routerLink="/mes-rendez-vous" routerLinkActive="active">Mes rendez-vous</a>
       }
+      @if (session.role() === 'PRATICIEN') {
+        <a routerLink="/agenda" routerLinkActive="active">Mon agenda</a>
+      }
       @if (session.isLoggedIn()) {
         <button type="button" class="btn btn-secondary" (click)="logout()">Se déconnecter</button>
       } @else {

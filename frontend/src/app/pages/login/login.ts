@@ -2,7 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, input, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Role } from '../../core/api/models';
 import { AuthService } from '../../core/auth/auth.service';
+
+/** Page d'arrivée quand la connexion n'a pas été demandée par une autre page. */
+const HOME_BY_ROLE: Record<Role, string> = { PATIENT: '/mes-rendez-vous', PRATICIEN: '/agenda' };
 
 @Component({
   selector: 'app-login',
@@ -34,7 +38,7 @@ export class Login {
     const { email, password } = this.form.getRawValue();
 
     this.auth.login(email, password).subscribe({
-      next: () => this.router.navigateByUrl(safeReturnUrl(this.returnUrl())),
+      next: (role) => this.router.navigateByUrl(safeReturnUrl(this.returnUrl()) ?? HOME_BY_ROLE[role]),
       error: (e: unknown) => {
         this.submitting.set(false);
         // Le serveur renvoie le même 401 pour un email inconnu et un mauvais mot de passe :
@@ -55,6 +59,6 @@ export class Login {
  * sa connexion, vers un faux site (redirection ouverte). "//site-pirate.fr" est aussi
  * une URL externe pour le navigateur, d'où le second test.
  */
-function safeReturnUrl(url: string | undefined): string {
-  return url && url.startsWith('/') && !url.startsWith('//') ? url : '/';
+function safeReturnUrl(url: string | undefined): string | null {
+  return url && url.startsWith('/') && !url.startsWith('//') ? url : null;
 }
